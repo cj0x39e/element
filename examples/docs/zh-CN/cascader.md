@@ -8,17 +8,17 @@
 
 :::demo 只需为 Cascader 的`options`属性指定选项数组即可渲染出一个级联选择器。通过`props.expandTrigger`可以定义展开子级菜单的触发方式。
 ```html
-<div class="block">
+<!-- <div class="block">
   <span class="demonstration">默认 click 触发子菜单</span>
   <el-cascader
     v-model="value"
     :options="options"
     @change="handleChange"></el-cascader>
-</div>
+</div> -->
 <div class="block">
   <span class="demonstration">hover 触发子菜单</span>
   <el-cascader
-    v-model="value"
+    :value="value"
     :options="options"
     :props="{ expandTrigger: 'hover' }"
     @change="handleChange"></el-cascader>
@@ -1194,7 +1194,7 @@
 
 :::demo 通过`lazy`开启动态加载，并通过`lazyload`来设置加载数据源的方法。`lazyload`方法有两个参数，第一个参数`node`为当前点击的节点，第二个`resolve`为数据加载完成的回调(必须调用)。为了更准确的显示节点的状态，还可以对节点数据添加是否为叶子节点的标志位 (默认字段为`leaf`，可通过`props.leaf`修改)，否则会简单的以有无子节点来判断是否为叶子节点。
 ```html
-<el-cascader :props="props"></el-cascader>
+<el-cascader v-model="value" :props="props"></el-cascader>
 
 <script>
   let id = 0;
@@ -1202,20 +1202,31 @@
   export default {
     data() {
       return {
+        // value: [1, 2],
+        value: [[1, 2, 4]],
         props: {
+          checkStrictly: true,
           lazy: true,
+          expandTrigger: 'hover',
+          // multiple: false,
+          multiple: true,
           lazyLoad (node, resolve) {
             const { level } = node;
+            console.log('level', level)
             setTimeout(() => {
+              if (level === 2) {
+                debugger;
+              }
               const nodes = Array.from({ length: level + 1 })
-                .map(item => ({
-                  value: ++id,
+                .map((item, index) => ({
+                  value: [[1], [2, 3], [4, 5, 6]][level][index],
                   label: `选项${id}`,
                   leaf: level >= 2
                 }));
+                console.log(nodes)
               // 通过调用resolve将子节点数据返回，通知组件数据加载完成
               resolve(nodes);
-            }, 1000);
+            }, 500);
           }
         }
       };

@@ -110,7 +110,8 @@ export default {
       store: [],
       menus: [],
       activePath: [],
-      loadCount: 0
+      loadCount: 0,
+      loadMultipleIndex: 0
     };
   },
 
@@ -164,9 +165,36 @@ export default {
 
   methods: {
     initStore() {
-      const { config, options } = this;
+      const { config, options, multiple } = this;
       if (config.lazy && isEmpty(options)) {
-        this.lazyLoad();
+        // 多选初始化数据
+        if (multiple) {
+          this.$nextTick(() => {
+            const { checkedValue } = this
+            const loop = () => {
+              const root = this.loadCount === 0 ? null : this.store.getNodes()[0]
+              this.lazyLoadMultip(root, () => {}, () => {
+                console.log('ok')
+                this.loadCount++
+                if (this.loadCount < checkedValue.length) {
+                  // debugger
+                  loop()
+                } else {
+                  // 选中
+                  const nodes = checkedValue.map(v => this.getNodeByValue(v[v.length - 2])).filter(v => v !== null)
+                  // debugger;
+                  nodes.forEach(n => {
+                    n.doCheck(true)
+                  })
+                  this.$parent.computePresentTags();
+                }
+              })
+            }
+            loop();
+          })
+        } else {
+          this.lazyLoad();
+        }
       } else {
         this.store = new Store(options, config);
         this.menus = [this.store.getNodes()];
@@ -286,7 +314,50 @@ export default {
     handleCheckChange(value) {
       this.checkedValue = value;
     },
-    lazyLoad(node, onFullfiled) {
+    lazyLoadMultip(node, onFullfiled, multipleCallback) {
+      console.log('lazyLoadMultip')
+      const { config } = this;
+      if (!node) {
+        node = node || { root: true, level: 0 };
+        this.store = new Store([], config);
+        this.menus = [this.store.getNodes()];
+      }
+      node.loading = true;
+      const resolve = dataList => {
+        const parent = node.root ? null : node;
+        dataList && dataList.length && this.store.appendNodes(dataList, parent);
+        node.loading = false;
+        node.loaded = true;
+
+        // dispose default value on lazy load mode
+        if (Array.isArray(this.checkedValue)) {
+          const nodeValue = this.checkedValue[this.loadCount][this.loadMultipleIndex++];
+          
+          const valueKey = this.config.value;
+          const leafKey = this.config.leaf;
+
+          if (Array.isArray(dataList) && dataList.filter(item => item[valueKey] === nodeValue).length > 0) {
+            const checkedNode = this.store.getNodeByValue(nodeValue);
+
+            if (!checkedNode.data[leafKey]) {
+              this.lazyLoadMultip(checkedNode, () => {
+                this.handleExpand(checkedNode);
+              }, multipleCallback);
+            }
+            
+            // console.log(this.loadCount)
+            if (this.loadMultipleIndex === this.checkedValue[this.loadCount].length - 1) {
+              this.loadMultipleIndex = 0  
+              multipleCallback && multipleCallback()
+            }
+          }
+        }
+
+        onFullfiled && onFullfiled(dataList);
+      };
+      config.lazyLoad(node, resolve);
+    },
+    lazyLoad(node, onFullfiled, multipleCallback) {
       const { config } = this;
       if (!node) {
         node = node || { root: true, level: 0 };
@@ -303,6 +374,7 @@ export default {
         // dispose default value on lazy load mode
         if (Array.isArray(this.checkedValue)) {
           const nodeValue = this.checkedValue[this.loadCount++];
+          
           const valueKey = this.config.value;
           const leafKey = this.config.leaf;
 
