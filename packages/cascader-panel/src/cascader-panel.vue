@@ -195,7 +195,7 @@ export default {
               nodes.forEach(n => {
                 n.doCheck(true);
               });
-              this.$parent.computePresentTags();
+              this.$parent.computePresentContent();
             };
             const hasValue = () => {
               this.loadMultipleIndex++;
@@ -217,7 +217,9 @@ export default {
               }
             };
             lazyData(null, () => {
-              hasValue();
+              if (this.checkedValue && this.checkedValue.length) {
+                hasValue();
+              }
             });
           });
         } else {
@@ -233,7 +235,9 @@ export default {
       const { value, checkedValue } = this;
       if (!isEqual(value, checkedValue)) {
         this.checkedValue = value;
-        this.syncMenuState();
+        if (this.store instanceof Store) {
+          this.syncMenuState();
+        }
       }
     },
     syncMenuState() {
